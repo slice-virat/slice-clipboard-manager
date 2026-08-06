@@ -8,6 +8,7 @@ struct Runner {
         runHistoryInsertTests()
         runHistoryPromoteAndFilterTests()
         runConfigTests()
+        runPersistenceTests()
         Harness.finish()
     }
 }
