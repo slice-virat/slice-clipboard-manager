@@ -19,6 +19,16 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private static let warningOrder: [WarningKind] = [.hotkey, .launchAtLogin, .persistence, .paste]
 
     private let statusItem: NSStatusItem
+    /// A single, long-lived `NSMenu` instance, mutated in place by
+    /// `rebuildMenu()` rather than replaced. AppKit already holds a reference
+    /// to whichever menu object is currently tracking a click when it invokes
+    /// `menuWillOpen`; swapping `statusItem.menu` to a *new* object from
+    /// inside that callback would not affect the menu already on screen, so
+    /// the "Enable Auto-Paste…" item could still go stale until the next
+    /// open-close cycle. Rebuilding this same instance's items is the
+    /// documented, supported way to keep a menu's contents current at the
+    /// moment it opens.
+    private let menu = NSMenu()
     private let onShowPanel: () -> Void
     private let onClearHistory: () -> Void
     private let onToggleLaunchAtLogin: () -> Void
@@ -37,6 +47,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         statusItem.button?.image = NSImage(
             systemSymbolName: "doc.on.clipboard",
             accessibilityDescription: "Clipboard Manager")
+        menu.delegate = self
+        statusItem.menu = menu
         rebuildMenu()
     }
 
@@ -56,8 +68,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         rebuildMenu()
     }
 
+    /// Repopulates `menu`'s items from scratch. Always mutates the same
+    /// `NSMenu` instance held in `menu` — never creates or assigns a new one
+    /// — so this is also safe to call from `menuWillOpen`, i.e. while `menu`
+    /// is the very menu currently being displayed.
     private func rebuildMenu() {
-        let menu = NSMenu()
+        menu.removeAllItems()
 
         let activeMessages = Self.warningOrder.compactMap { warnings[$0] }
         if !activeMessages.isEmpty {
@@ -92,8 +108,16 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Clipboard Manager",
                      action: #selector(quit), keyEquivalent: "q").target = self
+    }
 
-        statusItem.menu = menu
+    /// Sent by AppKit right before this menu is displayed. Rebuilding here
+    /// re-evaluates `Permissions.isAccessibilityGranted`, so "Enable
+    /// Auto-Paste…" is correct at the one moment it actually matters — when
+    /// the user is looking at the menu — rather than only after some
+    /// unrelated event (a warning change, a login-item toggle) happens to
+    /// trigger a rebuild first.
+    func menuWillOpen(_ menu: NSMenu) {
+        rebuildMenu()
     }
 
     @objc private func showPanel() { onShowPanel() }
