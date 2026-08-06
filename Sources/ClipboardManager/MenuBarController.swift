@@ -1,15 +1,29 @@
 import AppKit
 
 /// The status-bar icon and its menu. Also the surface for warnings, so a failed
-/// hotkey registration is visible rather than silent.
+/// hotkey registration, login-item change, disk save, or paste degradation is
+/// visible rather than silent.
 @MainActor
 final class MenuBarController: NSObject, NSMenuDelegate {
+    /// One warning slot per independent failure domain, so an event in one
+    /// domain (e.g. a successful paste) can never clobber or mask an
+    /// unrelated, still-unresolved warning in another (e.g. a dead hotkey).
+    enum WarningKind: Hashable {
+        case hotkey
+        case launchAtLogin
+        case persistence
+        case paste
+    }
+
+    /// Fixed so the menu lists warnings in a stable, predictable order.
+    private static let warningOrder: [WarningKind] = [.hotkey, .launchAtLogin, .persistence, .paste]
+
     private let statusItem: NSStatusItem
     private let onShowPanel: () -> Void
     private let onClearHistory: () -> Void
     private let onToggleLaunchAtLogin: () -> Void
 
-    private var warning: String?
+    private var warnings: [WarningKind: String] = [:]
 
     init(onShowPanel: @escaping () -> Void,
          onClearHistory: @escaping () -> Void,
@@ -26,10 +40,16 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         rebuildMenu()
     }
 
-    /// Surfaces a problem on the icon and in the menu. Pass nil to clear.
-    func setWarning(_ message: String?) {
-        warning = message
-        let symbol = message == nil ? "doc.on.clipboard" : "exclamationmark.triangle"
+    /// Surfaces a problem on the icon and in the menu, scoped to `kind` so it
+    /// cannot be cleared by an unrelated event resolving. Pass `nil` to clear
+    /// just that domain's warning; other domains are untouched.
+    func setWarning(_ message: String?, for kind: WarningKind) {
+        if let message {
+            warnings[kind] = message
+        } else {
+            warnings.removeValue(forKey: kind)
+        }
+        let symbol = warnings.isEmpty ? "doc.on.clipboard" : "exclamationmark.triangle"
         statusItem.button?.image = NSImage(
             systemSymbolName: symbol,
             accessibilityDescription: "Clipboard Manager")
@@ -39,10 +59,13 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private func rebuildMenu() {
         let menu = NSMenu()
 
-        if let warning {
-            let item = NSMenuItem(title: warning, action: nil, keyEquivalent: "")
-            item.isEnabled = false
-            menu.addItem(item)
+        let activeMessages = Self.warningOrder.compactMap { warnings[$0] }
+        if !activeMessages.isEmpty {
+            for message in activeMessages {
+                let item = NSMenuItem(title: message, action: nil, keyEquivalent: "")
+                item.isEnabled = false
+                menu.addItem(item)
+            }
             menu.addItem(.separator())
         }
 

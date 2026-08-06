@@ -24,7 +24,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         config = Config.load(from: configURL)
         // Write the file back so it exists and is discoverable for hand-editing.
-        try? config.save(to: configURL)
+        // The menu bar does not exist yet at this point, so any failure is
+        // captured here and surfaced once it does, a few lines down.
+        var configSaveError: String?
+        do {
+            try config.save(to: configURL)
+        } catch {
+            configSaveError = "Could not save config: \(error.localizedDescription)"
+        }
 
         store = HistoryStore(maxEntries: config.maxEntries)
         store.replaceAll(persistence.load())
@@ -49,11 +56,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             onToggleLaunchAtLogin: { [weak self] in
                 guard let self else { return }
-                if let error = LaunchAtLogin.setEnabled(!LaunchAtLogin.isEnabled) {
-                    self.menuBar?.setWarning("Launch at login failed: \(error)")
-                }
+                self.applyLaunchAtLogin(!LaunchAtLogin.isEnabled)
             }
         )
+
+        // Surfaced only now that the menu bar exists to surface it on.
+        if let configSaveError {
+            menuBar?.setWarning(configSaveError, for: .persistence)
+        }
 
         let hotkey = HotkeyManager(config: config.hotkey) { [weak self] in
             self?.panel?.toggle()
@@ -61,12 +71,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             try hotkey.register()
         } catch {
-            menuBar?.setWarning(error.localizedDescription)
+            menuBar?.setWarning(error.localizedDescription, for: .hotkey)
         }
         self.hotkey = hotkey
 
         if config.launchAtLogin {
-            LaunchAtLogin.setEnabled(true)
+            applyLaunchAtLogin(true)
         }
 
         if !Permissions.isAccessibilityGranted {
@@ -81,13 +91,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         monitor?.stop()
     }
 
+    /// Registers or unregisters the login item and reports the outcome under
+    /// the `.launchAtLogin` warning domain — clearing it on success, setting
+    /// it on failure — so a stale failure is never left displayed once the
+    /// condition resolves, and this domain is never touched by an unrelated
+    /// success (e.g. a paste) elsewhere.
+    private func applyLaunchAtLogin(_ enabled: Bool) {
+        let error = LaunchAtLogin.setEnabled(enabled)
+        menuBar?.setWarning(error.map { "Launch at login failed: \($0)" }, for: .launchAtLogin)
+    }
+
     private func scheduleSave() {
         saveDebouncer.schedule { [weak self] in
             guard let self else { return }
             do {
                 try self.persistence.save(self.store.entries)
+                self.menuBar?.setWarning(nil, for: .persistence)
             } catch {
-                self.menuBar?.setWarning("Could not save history: \(error.localizedDescription)")
+                self.menuBar?.setWarning("Could not save history: \(error.localizedDescription)", for: .persistence)
             }
         }
     }
@@ -97,9 +118,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let outcome = Paster.deliver(text: entry.text, to: target, monitor: monitor)
         switch outcome {
         case .pasted:
-            menuBar?.setWarning(nil)
+            menuBar?.setWarning(nil, for: .paste)
         case .copiedOnly(let reason):
-            menuBar?.setWarning("Copied to clipboard only — \(reason)")
+            menuBar?.setWarning("Copied to clipboard only — \(reason)", for: .paste)
         }
     }
 
