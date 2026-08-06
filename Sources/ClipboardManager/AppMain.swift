@@ -42,7 +42,8 @@ struct AppMain {
             if status == -9878 {
                 print("PASS: check 2 - duplicate register() threw registrationFailed(-9878), i.e. eventHotKeyExistsErr")
             } else {
-                print("PASS: check 2 - duplicate register() threw registrationFailed(\(status)) (expected -9878/eventHotKeyExistsErr; OS returned a different status)")
+                print("FAIL: check 2 - duplicate register() threw registrationFailed(\(status)), expected -9878 (eventHotKeyExistsErr)")
+                failures += 1
             }
         } catch {
             print("FAIL: check 2 - duplicate register() threw an unexpected error: \(error)")

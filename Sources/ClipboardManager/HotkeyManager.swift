@@ -23,6 +23,11 @@ final class HotkeyManager {
     private static var eventHandler: EventHandlerRef?
 
     private let config: HotkeyConfig
+    /// Retained in `Self.handlers` for as long as the hotkey stays
+    /// registered. If this closure captures its owner strongly, that owner
+    /// is kept alive for the registration's lifetime too — capture `[weak
+    /// self]` unless the owner is guaranteed to call `unregister()` (or be
+    /// torn down before the process exits) regardless.
     private let handler: () -> Void
     private var hotKeyRef: EventHotKeyRef?
     private var id: UInt32?
@@ -38,7 +43,10 @@ final class HotkeyManager {
 
     func register() throws {
         unregister()
-        Self.installEventHandlerIfNeeded()
+        let installStatus = Self.installEventHandlerIfNeeded()
+        guard installStatus == noErr else {
+            throw RegistrationError.registrationFailed(installStatus)
+        }
 
         let myID = Self.nextID
         Self.nextID += 1
@@ -73,20 +81,30 @@ final class HotkeyManager {
         }
     }
 
-    private static func installEventHandlerIfNeeded() {
-        guard eventHandler == nil else { return }
+    /// Installs the shared Carbon event handler exactly once.
+    ///
+    /// Returns `noErr` if a handler is already installed or the install just
+    /// succeeded. On failure, `eventHandler` is left `nil` (never set to a
+    /// bogus/partial ref), so a later `register()` call can retry the
+    /// install instead of being permanently stuck.
+    private static func installEventHandlerIfNeeded() -> OSStatus {
+        if eventHandler != nil { return noErr }
         var spec = EventTypeSpec(
             eventClass: OSType(kEventClassKeyboard),
             eventKind: UInt32(kEventHotKeyPressed)
         )
-        InstallEventHandler(
+        var handlerRef: EventHandlerRef?
+        let status = InstallEventHandler(
             GetEventDispatcherTarget(),
             hotkeyEventCallback,
             1,
             &spec,
             nil,
-            &eventHandler
+            &handlerRef
         )
+        guard status == noErr else { return status }
+        eventHandler = handlerRef
+        return noErr
     }
 }
 
