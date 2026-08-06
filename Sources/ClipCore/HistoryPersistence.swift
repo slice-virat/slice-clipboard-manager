@@ -25,7 +25,6 @@ public struct HistoryPersistence: Sendable {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return [] }
         guard let data = try? Data(contentsOf: fileURL) else { return [] }
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
         guard let entries = try? decoder.decode([ClipEntry].self, from: data) else {
             quarantine()
             return []
@@ -35,7 +34,6 @@ public struct HistoryPersistence: Sendable {
 
     public func save(_ entries: [ClipEntry]) throws {
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted]
         let data = try encoder.encode(entries)
         // Atomic so an interrupted write cannot truncate the existing file.

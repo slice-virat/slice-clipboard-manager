@@ -22,6 +22,12 @@ func runPersistenceTests() {
     try? store.save(entries)
     Harness.expectEqual(store.load(), entries, "entries round-trip through disk unchanged")
 
+    // Regression: an .iso8601 date strategy has no fractional seconds and
+    // would silently truncate this, breaking Equatable equality after reload.
+    let subSecond = ClipEntry(text: "sub-second", createdAt: Date(timeIntervalSince1970: 3_000.123456))
+    try? store.save([subSecond])
+    Harness.expectEqual(store.load(), [subSecond], "sub-second timestamp precision survives a round-trip")
+
     // File must not be world- or group-readable.
     let mode = (try? FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? NSNumber)??.intValue
     Harness.expectEqual(mode, 0o600, "history file is written with mode 0600")
