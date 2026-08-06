@@ -115,8 +115,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// it on failure — so a stale failure is never left displayed once the
     /// condition resolves, and this domain is never touched by an unrelated
     /// success (e.g. a paste) elsewhere.
+    ///
+    /// Only records the new value into `config` (and persists it) when the
+    /// `SMAppService` call actually succeeds — otherwise `config.json` would
+    /// claim a login-item state the system does not have, and the next launch
+    /// would silently re-derive from that wrong claim.
     private func applyLaunchAtLogin(_ enabled: Bool) {
         let error = LaunchAtLogin.setEnabled(enabled)
+        if error == nil {
+            config.launchAtLogin = enabled
+            persistConfig()
+        }
         menuBar?.setWarning(error.map { "Launch at login failed: \($0)" }, for: .launchAtLogin)
     }
 

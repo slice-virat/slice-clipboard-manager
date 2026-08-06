@@ -39,9 +39,15 @@ final class ClipboardMonitor {
 
     func start() {
         guard timer == nil else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true) { [weak self] _ in
+        // `Timer.scheduledTimer` only registers on the `.default` run loop mode,
+        // which AppKit stops servicing while a menu is tracking or a modal alert
+        // is up (`.eventTracking` / `.modalPanel`). Schedule explicitly on
+        // `.common` so polling keeps running in both.
+        let timer = Timer(timeInterval: pollInterval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.poll() }
         }
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
     }
 
     func stop() {

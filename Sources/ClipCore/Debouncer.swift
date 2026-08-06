@@ -24,9 +24,15 @@ public final class Debouncer {
     public func schedule(_ block: @escaping () -> Void) {
         pending = block
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+        // `Timer.scheduledTimer` only registers on the `.default` run loop mode,
+        // which AppKit stops servicing while a menu is tracking or a modal alert
+        // is up (`.eventTracking` / `.modalPanel`). Schedule explicitly on
+        // `.common` so a pending save isn't stalled for as long as those last.
+        let timer = Timer(timeInterval: delay, repeats: false) { [weak self] _ in
             MainActor.assumeIsolated { self?.flush() }
         }
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
     }
 
     /// Runs pending work immediately, if any. Safe to call when nothing is pending.
