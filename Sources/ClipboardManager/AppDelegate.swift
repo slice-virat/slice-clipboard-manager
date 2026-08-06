@@ -26,12 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Write the file back so it exists and is discoverable for hand-editing.
         // The menu bar does not exist yet at this point, so any failure is
         // captured here and surfaced once it does, a few lines down.
-        var configSaveError: String?
-        do {
-            try config.save(to: configURL)
-        } catch {
-            configSaveError = "Could not save config: \(error.localizedDescription)"
-        }
+        let configSaveError = persistConfig()
 
         store = HistoryStore(maxEntries: config.maxEntries)
         store.replaceAll(persistence.load())
@@ -79,7 +74,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             applyLaunchAtLogin(true)
         }
 
-        if !Permissions.isAccessibilityGranted {
+        // Prompt at most once, ever. Accessibility can only be granted by an
+        // administrator, so a user without admin rights can never satisfy this
+        // prompt — re-asking on every launch would nag them at every login for
+        // a capability they cannot enable. After the first ask, the menu-bar
+        // warning carries the information, and "Enable Auto-Paste…" in the menu
+        // re-triggers the request for anyone who later gains admin access.
+        if !Permissions.isAccessibilityGranted && !config.hasAskedForAccessibility {
+            config.hasAskedForAccessibility = true
+            persistConfig()
             promptForAccessibility()
         }
     }
@@ -89,6 +92,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         saveDebouncer.flush()
         hotkey?.unregister()
         monitor?.stop()
+    }
+
+    /// Saves `config` to disk, surfacing any failure under the `.persistence`
+    /// warning domain and returning the message so a caller running before the
+    /// menu bar exists can capture it and surface it once it does.
+    @discardableResult
+    private func persistConfig() -> String? {
+        do {
+            try config.save(to: configURL)
+            menuBar?.setWarning(nil, for: .persistence)
+            return nil
+        } catch {
+            let message = "Could not save config: \(error.localizedDescription)"
+            menuBar?.setWarning(message, for: .persistence)
+            return message
+        }
     }
 
     /// Registers or unregisters the login item and reports the outcome under

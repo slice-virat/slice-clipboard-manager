@@ -11,6 +11,7 @@ func runConfigTests() {
     Harness.expectEqual(d.launchAtLogin, true, "launch at login is on by default")
     Harness.expectEqual(d.hotkey.keyCode, 9, "default hotkey keyCode is 9 (V)")
     Harness.expectEqual(d.hotkey.modifiers, ["control", "option"], "default modifiers are control+option")
+    Harness.expectEqual(d.hasAskedForAccessibility, false, "accessibility prompt has not been shown by default")
 
     // controlKey (4096) | optionKey (2048) == 6144
     Harness.expectEqual(d.hotkey.carbonModifiers, 6144, "control+option maps to Carbon 6144")
@@ -35,6 +36,15 @@ func runConfigTests() {
     Harness.expectEqual(partial.maxEntries, 7, "specified key is honoured")
     Harness.expectEqual(partial.filterSecrets, false, "unspecified key falls back to default")
     Harness.expectEqual(partial.hotkey, HotkeyConfig.default, "unspecified hotkey falls back to default")
+    Harness.expectEqual(
+        partial.hasAskedForAccessibility, false,
+        "config file written without the key loads with hasAskedForAccessibility false")
+
+    // A config file that does specify the key is honoured.
+    try? Data(#"{"hasAskedForAccessibility": true}"#.utf8).write(to: url)
+    Harness.expectEqual(
+        Config.load(from: url).hasAskedForAccessibility, true,
+        "hasAskedForAccessibility true in the file is honoured")
 
     // Corrupt config falls back to defaults rather than crashing.
     try? Data("not json at all".utf8).write(to: url)
@@ -44,6 +54,10 @@ func runConfigTests() {
     var custom = Config.default
     custom.maxEntries = 25
     custom.filterSecrets = true
+    custom.hasAskedForAccessibility = true
     try? custom.save(to: url)
-    Harness.expectEqual(Config.load(from: url), custom, "config round-trips through disk")
+    let roundTripped = Config.load(from: url)
+    Harness.expectEqual(roundTripped, custom, "config round-trips through disk")
+    Harness.expectEqual(
+        roundTripped.hasAskedForAccessibility, true, "hasAskedForAccessibility survives save/load round trip")
 }

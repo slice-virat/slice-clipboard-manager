@@ -72,6 +72,14 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         menu.addItem(withTitle: "Show Clipboard History",
                      action: #selector(showPanel), keyEquivalent: "").target = self
 
+        // Only offered while the permission is missing. This is the way back in
+        // for someone who was not an administrator on first launch — the startup
+        // alert fires at most once, so without this the request is unreachable.
+        if !Permissions.isAccessibilityGranted {
+            menu.addItem(withTitle: "Enable Auto-Paste…",
+                         action: #selector(requestAccessibility), keyEquivalent: "").target = self
+        }
+
         let launchItem = NSMenuItem(title: "Launch at Login",
                                     action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
         launchItem.target = self
@@ -93,6 +101,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func toggleLaunchAtLogin() {
         onToggleLaunchAtLogin()
+        rebuildMenu()
+    }
+
+    @objc private func requestAccessibility() {
+        Permissions.requestAccessibility()
+        Permissions.openAccessibilitySettings()
         rebuildMenu()
     }
 

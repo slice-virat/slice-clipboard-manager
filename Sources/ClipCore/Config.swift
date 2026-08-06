@@ -39,19 +39,27 @@ public struct Config: Codable, Equatable, Sendable {
     public var hotkey: HotkeyConfig
     public var filterSecrets: Bool
     public var launchAtLogin: Bool
+    /// Set once the Accessibility alert has been shown. Prevents nagging a user
+    /// who cannot grant it — the permission is administrator-gated.
+    public var hasAskedForAccessibility: Bool
 
-    public init(maxEntries: Int, hotkey: HotkeyConfig, filterSecrets: Bool, launchAtLogin: Bool) {
+    public init(
+        maxEntries: Int, hotkey: HotkeyConfig, filterSecrets: Bool, launchAtLogin: Bool,
+        hasAskedForAccessibility: Bool = false
+    ) {
         self.maxEntries = maxEntries
         self.hotkey = hotkey
         self.filterSecrets = filterSecrets
         self.launchAtLogin = launchAtLogin
+        self.hasAskedForAccessibility = hasAskedForAccessibility
     }
 
     public static let `default` = Config(
         maxEntries: 50,
         hotkey: .default,
         filterSecrets: false,
-        launchAtLogin: true
+        launchAtLogin: true,
+        hasAskedForAccessibility: false
     )
 
     public init(from decoder: Decoder) throws {
@@ -61,6 +69,8 @@ public struct Config: Codable, Equatable, Sendable {
         hotkey = try container.decodeIfPresent(HotkeyConfig.self, forKey: .hotkey) ?? fallback.hotkey
         filterSecrets = try container.decodeIfPresent(Bool.self, forKey: .filterSecrets) ?? fallback.filterSecrets
         launchAtLogin = try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? fallback.launchAtLogin
+        hasAskedForAccessibility = try container.decodeIfPresent(Bool.self, forKey: .hasAskedForAccessibility)
+            ?? fallback.hasAskedForAccessibility
     }
 
     /// Never throws: a missing or unreadable file yields defaults.
