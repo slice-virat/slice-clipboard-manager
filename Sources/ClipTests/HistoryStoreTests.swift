@@ -15,3 +15,42 @@ func runHistoryStoreTests() {
     Harness.expectEqual(long.preview.count, 80, "preview truncates to 80 characters")
     Harness.expect(long.preview.hasSuffix("…"), "truncated preview ends with an ellipsis")
 }
+
+@MainActor
+func runHistoryInsertTests() {
+    Harness.suite("HistoryStore.insert")
+
+    let t0 = Date(timeIntervalSince1970: 1_000)
+
+    let store = HistoryStore(maxEntries: 3)
+    store.insert("one", now: t0)
+    store.insert("two", now: t0.addingTimeInterval(1))
+    Harness.expectEqual(store.entries.map(\.text), ["two", "one"], "newest entry is first")
+
+    Harness.expectEqual(store.insert("", now: t0), false, "empty text is rejected")
+    Harness.expectEqual(store.insert("   \n\t ", now: t0), false, "whitespace-only text is rejected")
+    Harness.expectEqual(store.entries.count, 2, "rejected inserts do not change the list")
+
+    // Re-inserting existing text promotes rather than duplicates.
+    let promotedAt = t0.addingTimeInterval(10)
+    store.insert("one", now: promotedAt)
+    Harness.expectEqual(store.entries.map(\.text), ["one", "two"], "duplicate insert promotes to front")
+    Harness.expectEqual(store.entries.count, 2, "duplicate insert does not grow the list")
+    Harness.expectEqual(store.entries[0].createdAt, promotedAt, "promoted entry refreshes createdAt")
+
+    // Cap evicts exactly the oldest.
+    let capped = HistoryStore(maxEntries: 3)
+    for (i, text) in ["a", "b", "c", "d"].enumerated() {
+        capped.insert(text, now: t0.addingTimeInterval(Double(i)))
+    }
+    Harness.expectEqual(capped.entries.map(\.text), ["d", "c", "b"], "cap evicts the oldest entry")
+    Harness.expectEqual(capped.entries.count, 3, "cap holds the list at maxEntries")
+
+    // onChange fires for accepted inserts only.
+    var changes = 0
+    let observed = HistoryStore(maxEntries: 3)
+    observed.onChange = { changes += 1 }
+    observed.insert("x", now: t0)
+    observed.insert("", now: t0)
+    Harness.expectEqual(changes, 1, "onChange fires only for accepted inserts")
+}

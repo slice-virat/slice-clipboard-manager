@@ -5,6 +5,7 @@ import Foundation
 struct Runner {
     static func main() {
         runHistoryStoreTests()
+        runHistoryInsertTests()
         Harness.finish()
     }
 }
