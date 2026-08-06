@@ -6,10 +6,14 @@ import Foundation
 @MainActor
 public final class Debouncer {
     private let delay: TimeInterval
-    // `nonisolated(unsafe)` so `deinit` (always nonisolated) can invalidate the
-    // timer on deallocation. Safe because `Timer.invalidate()` is documented
-    // as callable from any thread.
-    private nonisolated(unsafe) var timer: Timer?
+    // No `deinit` invalidates this: the scheduled closure captures `[weak self]`,
+    // so a pending timer never retains the `Debouncer`. If the debouncer is
+    // deallocated with work pending, the run loop keeps that one timer alive
+    // until it fires, `self` is nil, and it simply no-ops. Do not add a
+    // `deinit` that calls `timer?.invalidate()` — `Timer.invalidate()` must be
+    // called from the thread that installed the timer, which `deinit` cannot
+    // guarantee.
+    private var timer: Timer?
     private var pending: (() -> Void)?
 
     public init(delay: TimeInterval) {
@@ -38,9 +42,5 @@ public final class Debouncer {
         timer?.invalidate()
         timer = nil
         pending = nil
-    }
-
-    deinit {
-        timer?.invalidate()
     }
 }
