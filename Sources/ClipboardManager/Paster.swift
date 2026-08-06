@@ -36,20 +36,26 @@ enum Paster {
             return .copiedOnly(reason: "Could not activate \(target.localizedName ?? "the app").")
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + activationDelay) {
-            MainActor.assumeIsolated { sendCommandV() }
-        }
-        return .pasted
-    }
-
-    private static func sendCommandV() {
+        // Built synchronously so a construction failure can still be
+        // reported through the return value. Only the *posting* of these
+        // already-built events is delayed, never their construction.
         let source = CGEventSource(stateID: .combinedSessionState)
         let v = CGKeyCode(kVK_ANSI_V)
         guard let down = CGEvent(keyboardEventSource: source, virtualKey: v, keyDown: true),
               let up = CGEvent(keyboardEventSource: source, virtualKey: v, keyDown: false)
-        else { return }
+        else {
+            return .copiedOnly(reason: "Could not construct the paste keystroke.")
+        }
         down.flags = .maskCommand
         up.flags = .maskCommand
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + activationDelay) {
+            MainActor.assumeIsolated { postCommandV(down: down, up: up) }
+        }
+        return .pasted
+    }
+
+    private static func postCommandV(down: CGEvent, up: CGEvent) {
         down.post(tap: .cghidEventTap)
         up.post(tap: .cghidEventTap)
     }
