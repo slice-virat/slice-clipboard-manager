@@ -7,6 +7,7 @@ struct Runner {
         runHistoryStoreTests()
         runHistoryInsertTests()
         runHistoryPromoteAndFilterTests()
+        runConfigTests()
         Harness.finish()
     }
 }
