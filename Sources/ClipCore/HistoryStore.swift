@@ -25,9 +25,7 @@ public final class HistoryStore {
             return false
         }
         if let existing = entries.firstIndex(where: { $0.text == text }) {
-            var entry = entries.remove(at: existing)
-            entry.createdAt = now
-            entries.insert(entry, at: 0)
+            moveToFront(at: existing, now: now)
         } else {
             entries.insert(ClipEntry(text: text, createdAt: now), at: 0)
             if entries.count > maxEntries {
@@ -36,5 +34,42 @@ public final class HistoryStore {
         }
         onChange?()
         return true
+    }
+
+    /// Moves an existing entry to the front. Returns false if the id is unknown.
+    @discardableResult
+    public func promote(_ id: UUID, now: Date = Date()) -> Bool {
+        guard let index = entries.firstIndex(where: { $0.id == id }) else { return false }
+        moveToFront(at: index, now: now)
+        onChange?()
+        return true
+    }
+
+    /// Case- and diacritic-insensitive substring match, preserving list order.
+    /// An empty or whitespace-only query returns every entry.
+    public func filter(_ query: String) -> [ClipEntry] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return entries }
+        return entries.filter {
+            $0.text.range(of: trimmed, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+        }
+    }
+
+    /// Replaces the entire list, e.g. when loading from disk. Does not fire `onChange`.
+    public func replaceAll(_ newEntries: [ClipEntry]) {
+        entries = Array(newEntries.prefix(maxEntries))
+    }
+
+    public func clear() {
+        entries.removeAll()
+        onChange?()
+    }
+
+    /// Removes the entry at `index`, refreshes its `createdAt`, and reinserts it at the front.
+    /// Shared by `insert`'s dedupe branch and `promote` so both produce identical ordering.
+    private func moveToFront(at index: Int, now: Date) {
+        var entry = entries.remove(at: index)
+        entry.createdAt = now
+        entries.insert(entry, at: 0)
     }
 }

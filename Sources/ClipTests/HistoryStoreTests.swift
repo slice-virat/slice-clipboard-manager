@@ -54,3 +54,41 @@ func runHistoryInsertTests() {
     observed.insert("", now: t0)
     Harness.expectEqual(changes, 1, "onChange fires only for accepted inserts")
 }
+
+@MainActor
+func runHistoryPromoteAndFilterTests() {
+    Harness.suite("HistoryStore.promote / filter")
+
+    let t0 = Date(timeIntervalSince1970: 2_000)
+    let store = HistoryStore(maxEntries: 10)
+    for (i, text) in ["alpha", "beta", "gamma", "delta"].enumerated() {
+        store.insert(text, now: t0.addingTimeInterval(Double(i)))
+    }
+    // entries are now delta, gamma, beta, alpha
+    let beta = store.entries.first { $0.text == "beta" }!
+
+    let later = t0.addingTimeInterval(50)
+    Harness.expectEqual(store.promote(beta.id, now: later), true, "promote returns true for a known id")
+    Harness.expectEqual(store.entries.map(\.text), ["beta", "delta", "gamma", "alpha"],
+                        "promote moves the entry to front and preserves the rest of the order")
+    Harness.expectEqual(store.entries[0].createdAt, later, "promote refreshes createdAt")
+    Harness.expectEqual(store.promote(UUID(), now: later), false, "promote of an unknown id is a no-op")
+    Harness.expectEqual(store.entries.count, 4, "no-op promote does not change the list")
+
+    Harness.expectEqual(store.filter("").map(\.text), store.entries.map(\.text),
+                        "empty query returns everything in order")
+    Harness.expectEqual(store.filter("   ").count, 4, "whitespace-only query returns everything")
+    Harness.expectEqual(store.filter("ALPHA").map(\.text), ["alpha"], "filter is case-insensitive")
+    Harness.expectEqual(store.filter("mm").map(\.text), ["gamma"], "filter matches a substring")
+    Harness.expectEqual(store.filter("zzz").isEmpty, true, "no match yields an empty list")
+
+    let accented = HistoryStore(maxEntries: 5)
+    accented.insert("café", now: t0)
+    Harness.expectEqual(accented.filter("cafe").count, 1, "filter is diacritic-insensitive")
+
+    store.replaceAll([ClipEntry(text: "only", createdAt: t0)])
+    Harness.expectEqual(store.entries.map(\.text), ["only"], "replaceAll swaps the whole list")
+
+    store.clear()
+    Harness.expectEqual(store.entries.isEmpty, true, "clear empties the list")
+}
