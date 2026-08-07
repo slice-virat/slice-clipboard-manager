@@ -1,13 +1,48 @@
 # Clipboard Manager
 
 A menu-bar clipboard history for macOS. Keeps your last 50 copied text
-snippets; press ⌃⌥V to search them and paste one into whatever app you
-were using.
+snippets; press **⌃⌥V** to search them and paste one back.
+
+## Install
+
+    git clone <this-repo-url> && cd clipboard
+    ./setup.sh
+
+That's it. The script checks your machine, builds the app, runs the tests, and
+installs it to `~/Applications`. It needs **no administrator rights** and writes
+nothing outside your home folder. Takes a couple of minutes the first time.
+
+Then look for the clipboard icon in your menu bar and press ⌃⌥V.
+
+To update later: `git pull && ./setup.sh`. To remove it: `make uninstall`.
+
+### If setup.sh stops and asks for Command Line Tools
+
+It needs the Swift compiler, which comes with Xcode's Command Line Tools:
+
+    xcode-select --install
+
+That opens a system dialog and downloads a few GB. **It may ask for an
+administrator password** — if you don't have one, ask IT to run it, or ask a
+colleague to build the app and send you the finished `ClipboardManager.app`
+(a locally-built copy passed directly between machines works fine; a copy
+downloaded from Slack or the web does not — macOS blocks those).
+
+### Before you install: where your history is stored
+
+Your clipboard history is written to
+`~/Library/Application Support/ClipboardManager/history.json`, unencrypted.
+It is readable only by your account and never leaves your Mac, but **it
+includes anything you copy out of a password manager**.
+
+To skip password-manager copies, set `"filterSecrets": true` in
+`~/Library/Application Support/ClipboardManager/config.json` and restart the
+app. No rebuild needed.
 
 ## Requirements
 
-macOS 14 or later. Swift 6.3 toolchain (Command Line Tools are enough —
-full Xcode is not required).
+macOS 14 or later, and Swift 6.0 or later — Xcode's Command Line Tools are
+enough, full Xcode is not required.
 
 ## Build and install
 
