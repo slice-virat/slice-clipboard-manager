@@ -17,6 +17,12 @@ full Xcode is not required).
 
 Installs to `~/Applications`, so no administrator rights are needed.
 
+`make app` builds for the current machine only and signs ad-hoc, which means
+the result runs **only on the machine that built it**. To build something you
+can give to someone else, see [DISTRIBUTION.md](DISTRIBUTION.md) — it needs a
+universal binary and Apple notarization, and `make dist` will refuse to pretend
+otherwise.
+
 On first launch you are asked once for Accessibility access. It is needed
 only to send ⌘V to the app you were using. **Granting it requires an
 administrator**; without it the app runs in copy-only mode, where choosing
