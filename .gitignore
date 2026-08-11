@@ -1,5 +1,31 @@
+# Swift Package Manager
 .build/
+.swiftpm/
+Package.resolved
+
+# Build output — the .app bundle and its zip are produced by `make app` / `make dist`
 build/
-.DS_Store
 *.app
 *.zip
+
+# Xcode, if anyone opens the package in it
+*.xcodeproj
+*.xcworkspace
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Agent scratch
+.superpowers/
