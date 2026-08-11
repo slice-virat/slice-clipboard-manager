@@ -101,7 +101,7 @@ echo
 bold "Done — look for the clipboard icon in your menu bar"
 cat <<'EOF'
 
-  Press  ⌃⌥V  (control-option-V) to open your clipboard history.
+  Press  ⌘⇧V  (command-shift-V) to open your clipboard history.
 
   Type to search, ↑/↓ to move, ⌘1-⌘9 to jump, Enter to pick, Esc to close.
   It starts automatically when you log in.

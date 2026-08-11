@@ -10,8 +10,17 @@ public struct HotkeyConfig: Codable, Equatable, Sendable {
         self.modifiers = modifiers
     }
 
-    /// ⌃⌥V — keyCode 9 is kVK_ANSI_V.
-    public static let `default` = HotkeyConfig(keyCode: 9, modifiers: ["control", "option"])
+    /// ⌘⇧V — keyCode 9 is kVK_ANSI_V.
+    ///
+    /// Note this shadows "Paste and Match Style" in apps that bind it (Chrome,
+    /// Slack, Notes, VS Code); those still offer it via their Edit menu.
+    ///
+    /// Carbon's `RegisterEventHotKey` cannot distinguish left from right
+    /// modifiers — `cmdKey`/`shiftKey` match either side. Side-specific binding
+    /// would need a CGEvent tap reading device-dependent flags, which requires
+    /// Accessibility permission; Carbon was chosen precisely because it needs
+    /// none.
+    public static let `default` = HotkeyConfig(keyCode: 9, modifiers: ["command", "shift"])
 
     /// Carbon modifier mask for `RegisterEventHotKey`.
     /// Values are the Carbon constants: cmdKey 256, shiftKey 512, optionKey 2048, controlKey 4096.

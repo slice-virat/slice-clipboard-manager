@@ -1,7 +1,7 @@
 # Clipboard Manager
 
 A menu-bar clipboard history for macOS. Keeps your last 50 copied text
-snippets; press **⌃⌥V** to search them and paste one back.
+snippets; press **⌘⇧V** (command-shift-V) to search them and paste one back.
 
 ## Install
 
@@ -12,7 +12,7 @@ That's it. The script checks your machine, builds the app, runs the tests, and
 installs it to `~/Applications`. It needs **no administrator rights** and writes
 nothing outside your home folder. Takes a couple of minutes the first time.
 
-Then look for the clipboard icon in your menu bar and press ⌃⌥V.
+Then look for the clipboard icon in your menu bar and press ⌘⇧V (command-shift-V).
 
 To update later: `git pull && ./setup.sh`. To remove it: `make uninstall`.
 
@@ -72,7 +72,7 @@ use "Enable Auto-Paste…" in the menu-bar menu to request it again.
 
 | Key | Action |
 |---|---|
-| ⌃⌥V | Open the panel |
+| ⌘⇧V (command-shift-V) | Open the panel |
 | Type | Filter the history |
 | ↑ / ↓ | Move the selection |
 | ⌘1–⌘9 | Paste that row |
@@ -88,7 +88,7 @@ something already in it.
 
     {
       "maxEntries": 50,
-      "hotkey": { "keyCode": 9, "modifiers": ["control", "option"] },
+      "hotkey": { "keyCode": 9, "modifiers": ["command", "shift"] },
       "filterSecrets": false,
       "launchAtLogin": true,
       "hasAskedForAccessibility": false

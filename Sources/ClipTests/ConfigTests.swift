@@ -10,14 +10,14 @@ func runConfigTests() {
     Harness.expectEqual(d.filterSecrets, false, "secret filtering is off by default")
     Harness.expectEqual(d.launchAtLogin, true, "launch at login is on by default")
     Harness.expectEqual(d.hotkey.keyCode, 9, "default hotkey keyCode is 9 (V)")
-    Harness.expectEqual(d.hotkey.modifiers, ["control", "option"], "default modifiers are control+option")
+    Harness.expectEqual(d.hotkey.modifiers, ["command", "shift"], "default modifiers are command+shift")
     Harness.expectEqual(d.hasAskedForAccessibility, false, "accessibility prompt has not been shown by default")
 
-    // controlKey (4096) | optionKey (2048) == 6144
-    Harness.expectEqual(d.hotkey.carbonModifiers, 6144, "control+option maps to Carbon 6144")
+    // cmdKey (256) | shiftKey (512) == 768
+    Harness.expectEqual(d.hotkey.carbonModifiers, 768, "default command+shift maps to Carbon 768")
     Harness.expectEqual(
-        HotkeyConfig(keyCode: 9, modifiers: ["command", "shift"]).carbonModifiers, 768,
-        "command+shift maps to Carbon 768")
+        HotkeyConfig(keyCode: 9, modifiers: ["control", "option"]).carbonModifiers, 6144,
+        "control+option maps to Carbon 6144")
     Harness.expectEqual(
         HotkeyConfig(keyCode: 9, modifiers: ["bogus"]).carbonModifiers, 0,
         "unknown modifier names are ignored")
