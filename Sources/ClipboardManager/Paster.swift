@@ -26,14 +26,27 @@ enum Paster {
         // AFTER the write, so an unrelated write cannot consume the suppression.
         monitor?.noteSelfWrite()
 
-        guard Permissions.isAccessibilityGranted else {
-            return .copiedOnly(reason: "Accessibility permission is not granted.")
-        }
         guard let target else {
             return .copiedOnly(reason: "No target application was recorded.")
         }
-        guard target.activate() else {
-            return .copiedOnly(reason: "Could not activate \(target.localizedName ?? "the app").")
+
+        // Restore focus BEFORE checking Accessibility, and unconditionally.
+        // Activating another application needs no special permission — only
+        // synthesising the keystroke does. Checking the permission first meant
+        // that without it we returned early and never reactivated anything, so
+        // the user was left staring at a dismissed panel with their previous
+        // window still unfocused, having to click it before they could paste.
+        // Copy-only mode should still put them back where they came from.
+        let activated = target.activate()
+        let targetName = target.localizedName ?? "the previous app"
+
+        guard Permissions.isAccessibilityGranted else {
+            return .copiedOnly(reason: activated
+                ? "Accessibility permission is not granted — press ⌘V to paste."
+                : "Accessibility permission is not granted, and \(targetName) could not be reactivated.")
+        }
+        guard activated else {
+            return .copiedOnly(reason: "Could not activate \(targetName).")
         }
 
         // Built synchronously so a construction failure can still be
