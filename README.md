@@ -53,10 +53,16 @@ enough, full Xcode is not required.
 Installs to `~/Applications`, so no administrator rights are needed.
 
 `make app` builds for the current machine only and signs ad-hoc, which means
-the result runs **only on the machine that built it**. To build something you
-can give to someone else, see [DISTRIBUTION.md](DISTRIBUTION.md) — it needs a
-universal binary and Apple notarization, and `make dist` will refuse to pretend
-otherwise.
+the result runs **only on the machine that built it**. That is why everyone
+clones and runs `./setup.sh` rather than passing the app around — a locally
+built app is never quarantined, so macOS lets it run without any certificate.
+
+`make dist` exists for the other route: it produces a universal (Apple Silicon
++ Intel) bundle with the hardened runtime, ready for `make notarize`. Handing
+someone a prebuilt app they download requires an Apple Developer ID
+certificate and notarization — without those, Gatekeeper blocks it on every
+machine but the one that built it, and the override needs administrator
+rights. `make dist` warns you rather than letting you ship something broken.
 
 On first launch you are asked once for Accessibility access. It is needed
 only to send ⌘V to the app you were using. **Granting it requires an
