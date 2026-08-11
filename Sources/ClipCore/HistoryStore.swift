@@ -48,11 +48,7 @@ public final class HistoryStore {
     /// Case- and diacritic-insensitive substring match, preserving list order.
     /// An empty or whitespace-only query returns every entry.
     public func filter(_ query: String) -> [ClipEntry] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return entries }
-        return entries.filter {
-            $0.text.range(of: trimmed, options: [.caseInsensitive, .diacriticInsensitive]) != nil
-        }
+        entries.filter { $0.matches(query) }
     }
 
     /// Replaces the entire list, e.g. when loading from disk. Does not fire `onChange`.

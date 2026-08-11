@@ -85,6 +85,30 @@ func runHistoryPromoteAndFilterTests() {
     let accented = HistoryStore(maxEntries: 5)
     accented.insert("café", now: t0)
     Harness.expectEqual(accented.filter("cafe").count, 1, "filter is diacritic-insensitive")
+    Harness.expectEqual(accented.filter("CAFE").count, 1,
+                        "filter is case- and diacritic-insensitive together")
+
+    // A row displays `preview`, which collapses newlines to spaces. Searching had
+    // to match the collapsed form too, or a phrase the user can plainly see in a
+    // row would not match — the original bug.
+    let multiline = HistoryStore(maxEntries: 5)
+    multiline.insert("deploy staging\ncluster tonight", now: t0)
+    Harness.expectEqual(multiline.entries[0].preview, "deploy staging cluster tonight",
+                        "preview collapses the newline")
+    Harness.expectEqual(multiline.filter("staging cluster").count, 1,
+                        "a phrase spanning a newline matches, because the row shows it as one line")
+    Harness.expectEqual(multiline.filter("staging\tcluster").count, 1,
+                        "any whitespace in the query separates terms")
+
+    // Terms match independently and in any order, as a search box should.
+    let terms = HistoryStore(maxEntries: 5)
+    terms.insert("2026 invoice draft", now: t0)
+    terms.insert("invoice", now: t0.addingTimeInterval(1))
+    Harness.expectEqual(terms.filter("invoice 2026").map(\.text), ["2026 invoice draft"],
+                        "multiple terms match in any order")
+    Harness.expectEqual(terms.filter("invoice").count, 2, "a single term still matches broadly")
+    Harness.expectEqual(terms.filter("invoice missing").isEmpty, true,
+                        "every term must match, not just one")
 
     store.replaceAll([ClipEntry(text: "only", createdAt: t0)])
     Harness.expectEqual(store.entries.map(\.text), ["only"], "replaceAll swaps the whole list")

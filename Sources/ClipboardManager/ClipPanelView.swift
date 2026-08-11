@@ -13,12 +13,10 @@ struct ClipPanelView: View {
     @State private var keyMonitor: Any?
     @FocusState private var searchFocused: Bool
 
+    /// Uses `ClipEntry.matches` — the same definition `HistoryStore.filter` uses —
+    /// so the panel and the store can never disagree about what a query matches.
     private var visible: [ClipEntry] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return entries }
-        return entries.filter {
-            $0.text.range(of: trimmed, options: [.caseInsensitive, .diacriticInsensitive]) != nil
-        }
+        entries.filter { $0.matches(query) }
     }
 
     var body: some View {
@@ -43,13 +41,19 @@ struct ClipPanelView: View {
                     ScrollView {
                         LazyVStack(spacing: 0) {
                             ForEach(Array(visible.enumerated()), id: \.element.id) { index, entry in
+                                // Identify by the entry, never by position. `.id(index)`
+                                // would override the identity ForEach just derived from
+                                // `entry.id` and re-key rows by slot, so after the filter
+                                // changes SwiftUI could reuse a row view for a different
+                                // entry and leave stale text on screen.
                                 row(index: index, entry: entry)
-                                    .id(index)
+                                    .id(entry.id)
                             }
                         }
                     }
                     .onChange(of: selection) { _, new in
-                        proxy.scrollTo(new, anchor: .center)
+                        guard visible.indices.contains(new) else { return }
+                        proxy.scrollTo(visible[new].id, anchor: .center)
                     }
                 }
             }
