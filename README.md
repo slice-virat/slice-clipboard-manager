@@ -102,6 +102,34 @@ something already in it.
 
 Any missing key falls back to its default. Restart the app after editing.
 
+### Changing the hotkey
+
+The default **⌘⇧V** shadows "Paste and Match Style" in Chrome, Slack, Notes,
+and VS Code. Those apps still offer it from their Edit menu, but if you'd
+rather keep the keystroke, edit `modifiers` and restart the app.
+
+`modifiers` accepts any combination of `"command"`, `"shift"`, `"option"`, and
+`"control"`. Two combinations with essentially no conflicts:
+
+    "hotkey": { "keyCode": 9, "modifiers": ["control", "option"] }
+    "hotkey": { "keyCode": 9, "modifiers": ["control", "shift"] }
+
+`keyCode` is the physical key. A few common ones:
+
+| Key | Code | | Key | Code | | Key | Code |
+|-----|------|-|-----|------|-|-----|------|
+| A | 0 | | H | 4 | | V | 9 |
+| S | 1 | | G | 5 | | Space | 49 |
+| D | 2 | | Z | 6 | | ` | 50 |
+| F | 3 | | X | 7 | | C | 8 |
+
+Left and right modifiers cannot be told apart — `"command"` matches either
+side. Distinguishing them would need a different key-capture mechanism that
+requires Accessibility permission, which this app deliberately avoids needing.
+
+If the combination you pick is already claimed by another app, registration
+fails and the menu-bar icon becomes a warning triangle explaining why.
+
 `filterSecrets` is **off**: everything you copy, including passwords copied
 from a password manager, is stored in plaintext in `history.json` (mode
 0600, in the same directory). Set it to `true` to skip copies marked
