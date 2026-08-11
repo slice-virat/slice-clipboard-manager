@@ -5,12 +5,13 @@ snippets; press **⌘⇧V** (command-shift-V) to search them and paste one back.
 
 ## Install
 
-    git clone <this-repo-url> && cd clipboard
+    git clone <this-repo-url> && cd slice-clipboard-manager
     ./setup.sh
 
 That's it. The script checks your machine, builds the app, runs the tests, and
 installs it to `~/Applications`. It needs **no administrator rights** and writes
-nothing outside your home folder. Takes a couple of minutes the first time.
+nothing outside your home folder. Takes a couple of minutes the first time. 
+**If it asks for any admin creds for accessibility, deny it**
 
 Then look for the clipboard icon in your menu bar and press ⌘⇧V (command-shift-V).
 
